@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Registro de Asistencia</title>
+  <style>
+    body { font-family: Arial; padding: 2rem; background: #f4f4f4; }
+    h1 { color: #333; }
+    pre { background: #fff; padding: 1rem; border: 1px solid #ccc; overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <h1>Asistencias Registradas</h1>
+  <pre id="log">Cargando...</pre>
+
+  <script>
+    fetch('/api/asistencias')
+      .then(res => res.text())
+      .then(data => {
+        document.getElementById('log').textContent = data;
+      })
+      .catch(err => {
+        document.getElementById('log').textContent = "Error al cargar asistencias.";
+        console.error(err);
+      });
+  </script>
+</body>
+</html>
