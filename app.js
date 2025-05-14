@@ -1,22 +1,38 @@
-const SerialPort = require('serialport');
-const Readline = require('@serialport/parser-readline');
-const fs = require('fs');
+const express = require("express");
+const fs = require("fs");
+const path = require("path");
 
-// Cambia COM3 por tu puerto (en Linux suele ser /dev/ttyUSB0)
-const port = new SerialPort('COM3', { baudRate: 9600 });
-const parser = port.pipe(new Readline({ delimiter: '\r\n' }));
+// Importar desde serialport v10+
+const { SerialPort } = require("serialport");
+const { ReadlineParser } = require("@serialport/parser-readline");
 
-console.log('Esperando tarjetas RFID...');
+const app = express();
+const PORT = 3000;
 
-parser.on('data', (uid) => {
-  console.log(`Tarjeta detectada: ${uid}`);
+// Cambia "COM3" por el puerto real de tu Arduino
+const port = new SerialPort({
+  path: "COM3",  // 👈 CAMBIA esto si es necesario
+  baudRate: 9600,
+});
 
-  const now = new Date();
-  const timestamp = now.toISOString();
-  const entry = `${timestamp} - UID: ${uid}\n`;
+const parser = port.pipe(new ReadlineParser({ delimiter: "\r\n" }));
 
-  fs.appendFile('asistencias.txt', entry, (err) => {
-    if (err) console.error('Error al guardar asistencia:', err);
-    else console.log('Asistencia guardada.');
-  });
+parser.on("data", (data) => {
+  const tarjetasPermitidas = ["AB12CD34", "11223344", "A1B2C3D4"];
+  const now = new Date().toLocaleString();
+
+  if (tarjetasPermitidas.includes(data)) {
+    fs.appendFileSync("asistencias.txt", `${now} - ${data}\n`);
+    console.log(`✅ Asistencia registrada: ${data}`);
+  } else {
+    console.log(`🚫 UID no autorizado: ${data}`);
+  }
+});
+
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "index.html"));
+});
+
+app.listen(PORT, () => {
+  console.log(`🟢 Servidor corriendo en http://localhost:${PORT}`);
 });
