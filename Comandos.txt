@@ -1,3 +1,4 @@
+npm install express serialport
 npm install express
 
 
