@@ -5,3 +5,5 @@ npm install express
 node app.js
 node web.js
 http://localhost:3000
+
+npm install express serialport @serialport/parser-readline
