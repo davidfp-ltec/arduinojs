@@ -6,23 +6,74 @@
   <style>
     body { font-family: Arial; padding: 2rem; background: #f4f4f4; }
     h1 { color: #333; }
-    pre { background: #fff; padding: 1rem; border: 1px solid #ccc; overflow-x: auto; }
+    .estado {
+      font-size: 1.5rem;
+      margin: 1rem 0;
+      padding: 1rem;
+      border-radius: 5px;
+      text-align: center;
+    }
+    .permitido {
+      background-color: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    .denegado {
+      background-color: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
   </style>
 </head>
 <body>
   <h1>Asistencias Registradas</h1>
-  <pre id="log">Cargando...</pre>
+
+  <!-- 🟢 Aquí mostramos el estado del último escaneo -->
+  <div id="resultado" class="estado">Esperando escaneo...</div>
+
+  <!-- 🔻 Eliminado el historial para que no se muestre -->
 
   <script>
+    // Eliminamos la carga del historial
+    /*
     fetch('/api/asistencias')
       .then(res => res.text())
       .then(data => {
-        document.getElementById('log').textContent = data;
+        const lineas = data.split('\n').map(linea => {
+          const partes = linea.split(" - ");
+          return partes[1] || "";
+        });
+        document.getElementById('log').textContent = lineas.join('\n');
       })
       .catch(err => {
         document.getElementById('log').textContent = "Error al cargar asistencias.";
         console.error(err);
       });
+    */
+
+    // Consultar continuamente el último acceso
+    function actualizarEstado() {
+      fetch('/api/ultimo-acceso')
+        .then(res => res.json())
+        .then(data => {
+          const div = document.getElementById('resultado');
+          if (data.estado === "permitido") {
+            div.textContent = `✅ Acceso permitido - UID: ${data.uid}`;
+            div.className = "estado permitido";
+          } else if (data.estado === "denegado") {
+            div.textContent = `🚫 Acceso denegado - UID: ${data.uid}`;
+            div.className = "estado denegado";
+          } else {
+            div.textContent = "Esperando escaneo...";
+            div.className = "estado";
+          }
+        })
+        .catch(err => {
+          console.error("Error consultando último acceso:", err);
+        });
+    }
+
+    setInterval(actualizarEstado, 1000); // Actualiza cada segundo
   </script>
 </body>
 </html>

@@ -1,0 +1,25 @@
+{
+  "name": "arduinojs",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/davidfp-ltec/arduinojs.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/davidfp-ltec/arduinojs/issues"
+  },
+  "homepage": "https://github.com/davidfp-ltec/arduinojs#readme",
+  "dependencies": {
+    "@serialport/parser-readline": "^13.0.0",
+    "express": "^5.1.0",
+    "serialport": "^13.0.0"
+  }
+}
