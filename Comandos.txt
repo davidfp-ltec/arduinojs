@@ -7,3 +7,11 @@ node web.js
 http://localhost:3000
 
 npm install express serialport @serialport/parser-readline
+
+
+git config --global user.name "": Configurar el nombre de usuario de Github
+git pull: descargar
+git add .: añadir al repositorio todo lo trabajado
+git status: muestra el estado del repositorio
+git commit -m "": comentar los cambios realizados 
+git push: subir
