@@ -1,54 +1,102 @@
-//Hola a todos como estamos 55555misnafipnfaisnfkasfnklsafnaslknlknsaflkaslfnaslkfsfnlk//
-let ultimoAcceso = { uid: '', estado: '' };
+// app.js mejorado con sincronización a Google Sheets
+
 const express = require("express");
 const fs = require("fs");
 const path = require("path");
-
-// Importar desde serialport v10+
+const { google } = require("googleapis");
 const { SerialPort } = require("serialport");
 const { ReadlineParser } = require("@serialport/parser-readline");
 
 const app = express();
 const PORT = 3000;
 
-// Cambia "COM3" por el puerto real de tu Arduino
+// Puerto serie (ajusta a tu sistema)
 const port = new SerialPort({
-  path: "COM6",  // 👈 CAMBIA esto si es necesario
+  path: "COM12",
   baudRate: 9600,
 });
 
 const parser = port.pipe(new ReadlineParser({ delimiter: "\r\n" }));
 
-parser.on("data", (data) => {
-  if (!data || data.includes("Listo para leer tarjetas")) return; 
-  const tarjetasPermitidas = ["027DB8DEB6E000", "E789B56B", "9F3D8CE6","A779C86D", "08DEC7FC"];
-  const now = new Date().toLocaleString();
+// Variables de estado
+let ultimoAcceso = { uid: '', estado: '' };
+let ultimoUIDProcesado = '';
+const tarjetasPermitidas = {
+  "A779C86D": "David",
+  "E789B56B": "Luis",
+  "027DB8DEB6E000": "Laura",
+  "9F3D8CE6": "Carlos",
+  "08DEC7FC": "Ana",
+  "DED0CC05": "Ana",
+  "76F1B105": "Ana",
+  "C7F9AF05": "Ana",
+  "CBECB105": "Ana",
+  "015FB405": "Ana",
+  "6B61CD05": "Ana",
+  "47F7B005": "Ana",
+  "ED19CD05": "Ana",
+};
 
-  if (tarjetasPermitidas.includes(data)) {
-    fs.appendFileSync("asistencias.txt", `${now} - ${data}\n`);
-    ultimoAcceso = { uid: data, estado: "permitido" };
-    console.log(`✅ Asistencia registrada: ${data}`);
-  } else {
-    ultimoAcceso = { uid: data, estado: "denegado" };
-    console.log(`🚫 UID no autorizado: ${data}`);
-  }
+// Google Sheets Config
+const SHEET_ID = "1iPxhaiNhT_5rwYXc4Es8Q5pRWu1kcXuDos5JUy3EX9o";
+const SHEET_NAME = "Hoja 1";
+const auth = new google.auth.GoogleAuth({
+  keyFile: path.join(__dirname, "credentials.json"),
+  scopes: ["https://www.googleapis.com/auth/spreadsheets"]
 });
+
+async function agregarFilaAGoogleSheets(uid, nombre, estado) {
+  const client = await auth.getClient();
+  const sheets = google.sheets({ version: "v4", auth: client });
+  const fecha = new Date().toLocaleString("es-MX");
+  await sheets.spreadsheets.values.append({
+    spreadsheetId: SHEET_ID,
+    range: `${SHEET_NAME}!A:D`,
+    valueInputOption: "RAW",
+    requestBody: {
+      values: [[uid, nombre, fecha, estado.toUpperCase()]]
+    }
+  });
+}
+
+parser.on("data", async (data) => {
+  if (!data || data.includes("Listo para leer tarjetas")) return;
+  if (data === ultimoUIDProcesado) return;
+
+  const now = new Date().toLocaleString("es-MX");
+  const nombre = tarjetasPermitidas[data];
+
+  if (nombre) {
+    fs.appendFileSync("asistencias.txt", `${now} - ${data}\n`);
+    ultimoAcceso = { uid: data, estado: "permitido", nombre, timestamp: new Date().toISOString() };
+    console.log(`✅ Acceso permitido: ${data} (${nombre})`);
+    await agregarFilaAGoogleSheets(data, nombre, "permitido");
+  } else {
+    ultimoAcceso = { uid: data, estado: "denegado", timestamp: new Date().toISOString() };
+    console.log(`🚫 Acceso denegado: ${data}`);
+    await agregarFilaAGoogleSheets(data, "Desconocido", "denegado");
+  }
+
+  ultimoUIDProcesado = data;
+});
+
+app.use(express.static(path.join(__dirname, "public")));
 
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public/index.html"));
 });
 
-app.get('/api/asistencias', (req, res) => {
-  fs.readFile('asistencias.txt', 'utf8', (err, data) => {
-    if (err) return res.status(500).send('Error al leer el archivo');
+app.get("/api/asistencias", (req, res) => {
+  fs.readFile("asistencias.txt", "utf8", (err, data) => {
+    if (err) return res.status(500).send("Error al leer el archivo");
     res.send(data);
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`🟢 Servidor corriendo en http://localhost:${PORT}`);
+app.get("/api/ultimo-acceso", (req, res) => {
+  res.json(ultimoAcceso);
 });
 
-app.get('/api/ultimo-acceso', (req, res) => {
-  res.json(ultimoAcceso);
+app.listen(PORT, () => {
+  console.log(`🟢 Servidor corriendo en http://localhost:${PORT}`);
 });

@@ -2,78 +2,265 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>Registro de Asistencia</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RFID Access Control</title>
+  <link href="https://fonts.googleapis.com/css2?family=Saira:wght@400;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    body { font-family: Arial; padding: 2rem; background: #f4f4f4; }
-    h1 { color: #333; }
-    .estado {
-      font-size: 1.5rem;
-      margin: 1rem 0;
-      padding: 1rem;
-      border-radius: 5px;
-      text-align: center;
+    :root {
+      --gris-oscuro: #121212;
+      --naranja: #ff6f00;
+      --azul: #00eaff;
     }
+
+    body {
+      font-family: 'Saira', sans-serif;
+      background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
+      color: #e0f7fa;
+      margin: 0;
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 2rem;
+      text-shadow: 0 0 10px var(--azul);
+    }
+
+    #resultado {
+      width: 100%;
+      max-width: 500px;
+      background: #1c1c1c;
+      border-radius: 1rem;
+      padding: 2rem;
+      text-align: center;
+      font-size: 1.3rem;
+      box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
+      transition: all 0.5s ease;
+      animation: pulse 2s infinite ease-in-out;
+    }
+
     .permitido {
-      background-color: #d4edda;
-      color: #155724;
-      border: 1px solid #c3e6cb;
+      border-left: 8px solid #00e676;
+      box-shadow: 0 0 20px rgba(0, 230, 118, 0.5);
     }
     .denegado {
-      background-color: #f8d7da;
-      color: #721c24;
-      border: 1px solid #f5c6cb;
+      border-left: 8px solid #ff1744;
+      box-shadow: 0 0 20px rgba(255, 23, 68, 0.5);
+    }
+    .esperando {
+      border-left: 8px solid #ffc400;
+    }
+
+    .icono {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+    }
+
+    .estado-texto {
+      animation: typing 0.5s steps(20, end);
+      white-space: pre-wrap;
+      overflow: hidden;
+    }
+
+    .detalle {
+      margin-top: 1rem;
+      font-size: 1rem;
+      color: #b0bec5;
+    }
+
+    #historial {
+      margin-top: 3rem;
+      width: 100%;
+      max-width: 600px;
+      background: var(--gris-oscuro);
+      border-radius: 1rem;
+      padding: 1rem 2rem;
+      box-shadow: 0 0 20px rgba(0, 255, 255, 0.1);
+    }
+    #historial h2 {
+      font-size: 1.5rem;
+      border-bottom: 2px solid var(--azul);
+      padding-bottom: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    .registro {
+      border-bottom: 1px solid #333;
+      padding: 0.5rem 0;
+      font-size: 0.95rem;
+    }
+
+    #grafica-container {
+      margin-top: 3rem;
+      width: 100%;
+      max-width: 600px;
+      background: #1c1c1c;
+      border-radius: 1rem;
+      padding: 1rem 2rem;
+      box-shadow: 0 0 15px rgba(0, 64, 128, 0.4);
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.01); }
+    }
+
+    @keyframes typing {
+      from { width: 0; }
+      to { width: 100%; }
     }
   </style>
 </head>
 <body>
-  <h1>Asistencias Registradas</h1>
+  <h1>🔐 Panel de Acceso RFID</h1>
 
-  <!-- 🟢 Aquí mostramos el estado del último escaneo -->
-  <div id="resultado" class="estado">Esperando escaneo...</div>
+  <div id="resultado" class="esperando">
+    <div class="icono">⌛</div>
+    <div class="estado-texto">Esperando escaneo...</div>
+  </div>
 
-  <!-- 🔻 Eliminado el historial para que no se muestre -->
+  <div id="historial">
+    <h2>Historial Reciente</h2>
+    <div id="lista-registros"></div>
+  </div>
+
+  <div id="grafica-container">
+    <h2>📊 Actividad RFID</h2>
+    <canvas id="grafica-rfid" height="200"></canvas>
+  </div>
+
+  <audio id="audio-permitido" src="/sounds/permitido.mp3"></audio>
+  <audio id="audio-denegado" src="/sounds/denegado.mp3"></audio>
+  <audio id="audio-esperando" src="/sounds/esperando.mp3"></audio>
 
   <script>
-    // Eliminamos la carga del historial
-    /*
-    fetch('/api/asistencias')
-      .then(res => res.text())
-      .then(data => {
-        const lineas = data.split('\n').map(linea => {
-          const partes = linea.split(" - ");
-          return partes[1] || "";
-        });
-        document.getElementById('log').textContent = lineas.join('\n');
-      })
-      .catch(err => {
-        document.getElementById('log').textContent = "Error al cargar asistencias.";
-        console.error(err);
-      });
-    */
+    const historial = [];
+    let ultimoUID = null;
 
-    // Consultar continuamente el último acceso
+    const ctx = document.getElementById('grafica-rfid').getContext('2d');
+    const chartData = {
+      labels: [],
+      datasets: [
+        {
+          label: 'Accesos Permitidos',
+          data: [],
+          borderColor: '#00e676',
+          backgroundColor: 'rgba(0, 230, 118, 0.2)',
+          fill: true
+        },
+        {
+          label: 'Accesos Denegados',
+          data: [],
+          borderColor: '#ff1744',
+          backgroundColor: 'rgba(255, 23, 68, 0.2)',
+          fill: true
+        }
+      ]
+    };
+
+    const chart = new Chart(ctx, {
+      type: 'line',
+      data: chartData,
+      options: {
+        responsive: true,
+        scales: {
+          x: { display: true },
+          y: { beginAtZero: true }
+        }
+      }
+    });
+
+    function reproducirSonido(tipo) {
+      const audio = document.getElementById(`audio-${tipo}`);
+      if (audio) {
+        audio.currentTime = 0;
+        audio.play();
+      }
+    }
+
     function actualizarEstado() {
       fetch('/api/ultimo-acceso')
         .then(res => res.json())
         .then(data => {
           const div = document.getElementById('resultado');
-          if (data.estado === "permitido") {
-            div.textContent = `✅ Acceso permitido - UID: ${data.uid}`;
-            div.className = "estado permitido";
-          } else if (data.estado === "denegado") {
-            div.textContent = `🚫 Acceso denegado - UID: ${data.uid}`;
-            div.className = "estado denegado";
+          const icon = div.querySelector('.icono');
+          const txt = div.querySelector('.estado-texto');
+          div.classList.remove('permitido', 'denegado', 'esperando');
+
+          let estadoTexto = '';
+          let clase = '';
+          let icono = '';
+
+          if (data.estado === 'permitido') {
+            icono = '✅';
+            estadoTexto = `Acceso <strong>Permitido</strong><br>UID: ${data.uid}`;
+            if (data.nombre) estadoTexto += `<br>👤 ${data.nombre}`;
+            clase = 'permitido';
+          } else if (data.estado === 'denegado') {
+            icono = '🚫';
+            estadoTexto = `Acceso <strong>Denegado</strong><br>UID: ${data.uid}`;
+            clase = 'denegado';
           } else {
-            div.textContent = "Esperando escaneo...";
-            div.className = "estado";
+            icono = '⌛';
+            estadoTexto = 'Esperando escaneo...';
+            clase = 'esperando';
           }
+
+          if (data.timestamp) {
+            const timeString = new Date(data.timestamp).toLocaleTimeString();
+            estadoTexto += `<div class="detalle">${timeString}</div>`;
+
+            if (data.uid !== ultimoUID) {
+              historial.unshift(`${icono} ${data.nombre || data.uid} - ${timeString} (${data.estado})`);
+              if (historial.length > 10) historial.pop();
+              actualizarHistorial();
+              reproducirSonido(data.estado);
+              actualizarGrafica(data.estado, timeString);
+              ultimoUID = data.uid;
+            }
+          }
+
+          icon.textContent = icono;
+          txt.innerHTML = estadoTexto;
+          div.classList.add(clase);
         })
         .catch(err => {
-          console.error("Error consultando último acceso:", err);
+          console.error('Error al consultar acceso:', err);
         });
     }
 
-    setInterval(actualizarEstado, 1000); // Actualiza cada segundo
+    function actualizarHistorial() {
+      const contenedor = document.getElementById('lista-registros');
+      contenedor.innerHTML = historial.map(linea => `<div class="registro">${linea}</div>`).join('');
+    }
+
+    function actualizarGrafica(estado, hora) {
+      const maxPuntos = 10;
+      if (!chartData.labels.includes(hora)) {
+        chartData.labels.push(hora);
+        chartData.datasets[0].data.push(estado === 'permitido' ? 1 : 0);
+        chartData.datasets[1].data.push(estado === 'denegado' ? 1 : 0);
+      } else {
+        const idx = chartData.labels.indexOf(hora);
+        if (estado === 'permitido') chartData.datasets[0].data[idx]++;
+        if (estado === 'denegado') chartData.datasets[1].data[idx]++;
+      }
+
+      if (chartData.labels.length > maxPuntos) {
+        chartData.labels.shift();
+        chartData.datasets[0].data.shift();
+        chartData.datasets[1].data.shift();
+      }
+
+      chart.update();
+    }
+
+    setInterval(actualizarEstado, 1000);
+    actualizarEstado();
   </script>
 </body>
 </html>
