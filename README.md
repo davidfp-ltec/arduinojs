@@ -89,4 +89,4 @@ MIT - Uso educativo y libre.
 
 ---
 
-Desarrollado por \5to Bachillerato en Computación, Promo 2025 🚀
+Desarrollado por 5to Bachillerato en Computación, Promo 2025 🚀
