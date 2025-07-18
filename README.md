@@ -83,4 +83,4 @@ Opcionalmente, podría integrarse la lectura de esta lista desde Google Sheets.
 
 ---
 
-Desarrollado por Dania Lémus y Santiago Escobar, estudiantes de 5to Bachillerato en Computación, Promoción 2025 🚀
+Desarrollado por Dania Lémus y Santiago Escobar, estudiantes de 5to Bachillerato en Computación, Promoción 2025
