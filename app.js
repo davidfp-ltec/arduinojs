@@ -20,19 +20,12 @@ const parser = port.pipe(new ReadlineParser({ delimiter: "\r\n" }));
 let ultimoAcceso = { uid: '', estado: '' };
 let ultimoUIDProcesado = '';
 const tarjetasPermitidas = {
-  "A779C86D": "David",
-  "E789B56B": "Luis",
-  "027DB8DEB6E000": "Laura",
-  "9F3D8CE6": "Carlos",
-  "08DEC7FC": "Jatime",
-  "DED0CC05": "Ana",
-  "76F1B105": "Ana",
-  "C7F9AF05": "Ana",
-  "CBECB105": "Ana",
-  "015FB405": "Ana",
-  "6B61CD05": "Ana",
-  "47F7B005": "Ana",
-  "ED19CD05": "Ana",
+  "76F1B105": "David Arturo Franco Pacheco",
+  "C7F9AF05": "Gabriel Santiago Escobar Hernández",
+  "CBECB105": "Gustavo José Ortíz Vega",
+  "6B61CD05": "Dania Beticia Lémus Sagastume",
+  "47F7B005": "Kevin Dagoberto Guerra Giron",
+  "ED19CD05": "Andrea Natalia Abigail Morales Brito",
 };
 
 // Google Sheets Config
